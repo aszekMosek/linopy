@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import functools
 import logging
-from collections.abc import Collection, Hashable
 from dataclasses import dataclass, field
 from itertools import product, zip_longest
 from typing import (
@@ -36,12 +35,8 @@ from pandas.core.frame import DataFrame
 from pandas.core.indexes.range import RangeIndex
 from pandas.core.series import Series
 from scipy.sparse import csc_matrix
-from scipy.sparse._csc import csc_matrix
 from xarray import Coordinates, DataArray, Dataset
-from xarray.core.coordinates import DataArrayCoordinates, DatasetCoordinates
-from xarray.core.dataarray import DataArray, DataArrayCoordinates
-from xarray.core.dataset import Dataset
-from xarray.core.groupby import DatasetGroupBy
+from xarray.core.coordinates import DataArrayCoordinates
 from xarray.core.indexes import Indexes
 from xarray.core.types import Dims
 from xarray.core.utils import Frozen
@@ -110,10 +105,10 @@ def _expr_unwrap(
         LinearExpression,
         int,
         QuadraticExpression,
-        xarray.core.dataarray.DataArray,
-        xarray.core.dataset.Dataset,
+        DataArray,
+        Dataset,
     ]
-) -> Union[int, xarray.core.dataset.Dataset, xarray.core.dataarray.DataArray]:
+) -> Union[int, Dataset, DataArray]:
     if isinstance(maybe_expr, (LinearExpression, QuadraticExpression)):
         return maybe_expr.data
 
@@ -486,9 +481,7 @@ class LinearExpression:
 
     def __mul__(
         self,
-        other: Union[
-            LinearExpression, int, xarray.core.dataarray.DataArray, Variable, float
-        ],
+        other: Union[LinearExpression, int, DataArray, Variable, float],
     ) -> Union[LinearExpression, QuadraticExpression]:
         """
         Multiply the expr by a factor.
@@ -537,7 +530,7 @@ class LinearExpression:
         return self * self
 
     def __rmul__(
-        self, other: Union[float, int, xarray.core.dataarray.DataArray]
+        self, other: Union[float, int, DataArray]
     ) -> Union[LinearExpression, QuadraticExpression]:
         """
         Right-multiply the expr by a factor.
@@ -579,9 +572,7 @@ class LinearExpression:
     def __le__(self, rhs: int) -> Constraint:
         return self.to_constraint(LESS_EQUAL, rhs)
 
-    def __ge__(
-        self, rhs: Union[int, ndarray, xarray.core.dataarray.DataArray]
-    ) -> Constraint:
+    def __ge__(self, rhs: Union[int, ndarray, DataArray]) -> Constraint:
         return self.to_constraint(GREATER_EQUAL, rhs)
 
     def __eq__(self, rhs: Union[LinearExpression, float, Variable, int]) -> Constraint:
@@ -693,7 +684,7 @@ class LinearExpression:
         return "LinearExpression"
 
     @property
-    def data(self) -> xarray.core.dataset.Dataset:
+    def data(self) -> Dataset:
         return self._data
 
     @property
@@ -738,7 +729,7 @@ class LinearExpression:
         self.data["const"] = value
 
     @property
-    def has_constant(self) -> xarray.core.dataarray.DataArray:
+    def has_constant(self) -> DataArray:
         return self.const.any()
 
     # create a dummy for a mask, which can be implemented later
@@ -747,7 +738,7 @@ class LinearExpression:
         return None
 
     @has_optimized_model
-    def _map_solution(self) -> xarray.core.dataarray.DataArray:
+    def _map_solution(self) -> DataArray:
         """
         Replace variable labels by solution values.
         """
@@ -759,7 +750,7 @@ class LinearExpression:
         return xr.DataArray(values, dims=self.vars.dims, coords=self.vars.coords)
 
     @property
-    def solution(self) -> xarray.core.dataarray.DataArray:
+    def solution(self) -> DataArray:
         """
         Get the optimal values of the expression.
 
@@ -1046,9 +1037,7 @@ class LinearExpression:
         data = self.data.assign(vars=vars)
         return QuadraticExpression(data, self.model)
 
-    def to_constraint(
-        self, sign: Union[str, xarray.core.dataarray.DataArray], rhs: Any
-    ) -> Constraint:
+    def to_constraint(self, sign: Union[str, DataArray], rhs: Any) -> Constraint:
         """
         Convert a linear expression to a constraint.
 
@@ -1075,7 +1064,7 @@ class LinearExpression:
         """
         return self.__class__(self.data[["coeffs", "vars"]], self.model)
 
-    def isnull(self) -> xarray.core.dataarray.DataArray:
+    def isnull(self) -> DataArray:
         """
         Get a boolean mask with true values where there is only missing values in an expression.
 
@@ -1088,10 +1077,8 @@ class LinearExpression:
 
     def where(
         self,
-        cond: xarray.core.dataarray.DataArray,
-        other: Optional[
-            Union[LinearExpression, int, xarray.core.dataarray.DataArray]
-        ] = None,
+        cond: DataArray,
+        other: Optional[Union[LinearExpression, int, DataArray]] = None,
         **kwargs,
     ) -> Union[LinearExpression, QuadraticExpression]:
         """
@@ -1179,7 +1166,7 @@ class LinearExpression:
 
     def groupby(
         self,
-        group: Union[DataFrame, Series, xarray.core.dataarray.DataArray],
+        group: Union[DataFrame, Series, DataArray],
         squeeze: "bool" = True,
         restore_coord_dims: "bool" = None,
         **kwargs,
@@ -1417,7 +1404,7 @@ class QuadraticExpression(LinearExpression):
 
     _fill_value = {"vars": -1, "coeffs": np.nan, "const": np.nan}
 
-    def __init__(self, data: xarray.core.dataset.Dataset, model: Model) -> None:
+    def __init__(self, data: Dataset, model: Model) -> None:
         super().__init__(data, model)
 
         if data is None:
@@ -1515,7 +1502,7 @@ class QuadraticExpression(LinearExpression):
             NotImplemented
 
     @property
-    def solution(self) -> xarray.core.dataarray.DataArray:
+    def solution(self) -> DataArray:
         """
         Get the optimal values of the expression.
 

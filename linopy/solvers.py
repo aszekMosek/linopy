@@ -967,13 +967,13 @@ def run_mosek(
                                     skx[m.getvarnameindex(o.group(2))] = (
                                         mosek.stakey.basis
                                     )
-                                except:
+                                except:  # noqa: E722
                                     pass
                                 try:
                                     skc[m.getvarnameindex(o.group(3))] = (
                                         mosek.stakey.low if key == "XL" else "XU"
                                     )
-                                except:
+                                except:  # noqa: E722
                                     pass
                             else:
                                 key = o.group(4)
@@ -990,10 +990,10 @@ def run_mosek(
 
                                 try:
                                     skx[m.getvarnameindex(name)] = stakey
-                                except:
+                                except:  # noqa: E722
                                     try:
                                         skc[m.getvarnameindex(name)] = stakey
-                                    except:
+                                    except:  # noqa: E722
                                         pass
                 m.putskc(mosek.soltype.bas, skc)
                 m.putskx(mosek.soltype.bas, skx)
@@ -1018,7 +1018,6 @@ def run_mosek(
                         skc.reverse()
                         skx.sort()
                         skx.reverse()
-                        numcon = m.getnumcon()
                         while skx and skc and skx[-1][0] == 0 and skc[-1][0] == 0:
                             (_, i, kc) = skc.pop()
                             (_, j, kx) = skx.pop()
